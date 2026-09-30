@@ -1,139 +1,125 @@
-# SMARTDELIVER AI — E-Commerce Delivery Center Location Optimization
+# SmartDeliver AI – Nanded Delivery Intelligence
 
-> **Full Project Title**: AI-Based E-Commerce Delivery Center Location Optimization Using Geospatial Data and K-Means Clustering  
-> **Primary Target City**: Nanded, Maharashtra, India (~19.1550° N, 77.3100° E)
-
----
-
-## 1. Project Overview & Business Purpose
-**SMARTDELIVER AI** is an enterprise-grade B2B logistics intelligence platform designed to answer a fundamental business question for e-commerce companies:
-
-> **"Where should an e-commerce company open its next delivery center in a city?"**
+## 1. Project Overview & Purpose
+**SmartDeliver AI** is an AI/data-driven decision-support system for recommending e-commerce delivery-center locations in Nanded, Maharashtra, India (~19.1550° N, 77.3100° E).
 
 The platform evaluates spatial customer demand patterns, applies scikit-learn K-Means clustering, computes WCSS (Inertia) for the Elbow Method and Silhouette scores, synthesizes candidate delivery center sites from cluster centroids and road network nodes, and scores each site using a multi-criteria decision-support engine.
 
----
-
-## 2. Research Methodology & Data Pipeline
-Adapted from geospatial AI methodologies:
-1. **Data Collection**: Spatial customer & order locations, road network connectivity, traffic levels, operating costs, existing delivery hubs.
-2. **Data Cleaning**: Pandas validation pipeline filtering missing values, duplicates, and out-of-bounds coordinates with summary metrics.
-3. **Exploratory Data Analysis**: Demand aggregation, orders by locality, daily demand trends, order value distribution.
-4. **K-Means Clustering**: Scikit-learn `KMeans` fitting across $K=2..8$ on standardized spatial features.
-5. **Elbow Method & WCSS**: WCSS calculation across $K=2..8$ for curvature evaluation.
-6. **Silhouette Analysis**: Evaluation of cluster separation efficiency to determine optimal $K$.
-7. **Cluster Centroids**: Computation of unscaled cluster center coordinates as candidate anchors.
-8. **Candidate Site Generation**: Synthesizing 5-11 candidate sites from centroids, commercial nodes, and road junctions.
-9. **Geographic Distance**: Haversine distance calculations for average distance, median distance, max distance, and 2km / 5km / 10km catchment coverage.
-10. **Multi-Criteria Scoring Engine**:
-    $$Final\ Score = 0.30 \times Demand + 0.25 \times Distance + 0.15 \times Connectivity + 0.15 \times Cost + 0.15 \times Coverage$$
-    Supports dynamic priority presets (*Fast Delivery*, *Low Cost*, *Maximum Coverage*, *High Demand*, *Balanced*).
-11. **Dynamic AI Rationale**: Automated generation of positive strengths and risk considerations.
-12. **Map Visualization**: Interactive OpenStreetMap centered on Nanded with custom layer toggles.
+> **Note on Datasets**: All datasets provided in this project (`customers_orders.csv`, `population.csv`, `roads.csv`, `delivery_centers.csv`, and `locations.csv`) are synthetic and illustrative, designed to model realistic operational scenarios for delivery hub optimization in Nanded.
 
 ---
 
-## 3. Nanded Public Data Research Inventory
-1. **Nanded Ward Boundaries**: NWCMC Portal ([nwcmc.gov.in](https://www.nwcmc.gov.in)) & Datameet India Maps (GeoJSON/Shapefile).
-2. **Census Population & Households**: Census of India 2011 Primary Census Abstract via [data.gov.in](https://data.gov.in) (550,439 population, 102,297 households).
-3. **Geographic Coordinates**: OpenStreetMap Overpass Turbo / Nominatim API for Nanded localities (Anand Nagar, Taroda Naka, CIDCO, Workshop Corner, Old Nanded, Vasmat Road, Vishnupuri).
-4. **Road Network**: OpenStreetMap Geofabrik India extract (NH-61, Hingoli Rd, Airport Rd, CIDCO Expressway, Vasmat Rd Bypass).
-5. **Shops & Commercial POIs**: OpenStreetMap POI data.
-6. **Demographics & Income**: Maharashtra DES District Statistical Abstract.
-7. **Customer Order Data**: Real e-commerce customer coordinates are proprietary private commercial data. Generated a clearly labeled simulated dataset: `nanded_customer_data.csv` (`customer_id, latitude, longitude, orders, ward`).
+## 2. Technology Stack
+
+### Backend
+- **Python**: Core programming language
+- **FastAPI**: REST API framework serving backend endpoints and static frontend assets
+- **Uvicorn**: High-performance ASGI web server
+
+### Frontend
+- **HTML5**: Semantic web page structure
+- **Vanilla CSS**: Clean, responsive styling and layout system
+- **Vanilla JavaScript**: Client-side logic, API communication, and state management
+- *(Note: The frontend is purely vanilla HTML/CSS/JS served directly by FastAPI. It does NOT use React, Vite, or external build steps.)*
+
+### ML & Data Science
+- **Pandas**: Data loading, cleaning, validation, and aggregations
+- **NumPy**: Numerical computations
+- **scikit-learn**:
+  - `StandardScaler`: Normalization of spatial coordinates
+  - `KMeans`: Unsupervised customer spatial clustering
+  - Elbow Method / WCSS (Inertia): Evaluating cluster quality across $K=2..8$
+  - Silhouette Score: Automated detection of optimal cluster count $K$
+
+### Geospatial & Mapping
+- **Haversine Distance**: Calculating customer delivery distances and coverage radii (2km, 5km, 10km)
+- **Leaflet.js**: Client-side interactive mapping library
+- **OpenStreetMap**: Base map tiles and spatial coordinate references for Nanded
 
 ---
 
-## 4. Project Structure
+## 3. Data Inventory (Synthetic / Illustrative)
+The `data/` directory contains:
+- `customers_orders.csv`: Synthetic customer records with order frequencies, order values, and spatial coordinates in Nanded.
+- `population.csv`: Synthetic population density and demographic estimates across Nanded localities.
+- `roads.csv`: Synthetic road connectivity and accessibility ratings for major Nanded corridors.
+- `delivery_centers.csv`: Existing delivery hub locations and operational capacities.
+- `locations.csv`: Landmark reference points and commercial nodes across Nanded.
+- `auth.sqlite3`: Local SQLite database for user authentication and session management.
+
+---
+
+## 4. Repository Structure
 ```
 smartdeliver-ai/
 ├── backend/
-│   ├── app/
-│   │   ├── main.py                     # FastAPI entry point & CORS
-│   │   ├── config.py                   # System configuration
-│   │   ├── database/
-│   │   │   ├── session.py              # SQLite / SQLAlchemy connection
-│   │   │   └── models.py               # Database ORM models
-│   │   ├── schemas/
-│   │   │   └── schemas.py              # Pydantic data schemas
-│   │   ├── ml/
-│   │   │   ├── cleaner.py              # Pandas data cleaning module
-│   │   │   ├── demand.py               # Demand metrics & aggregations
-│   │   │   ├── clustering.py           # K-Means, Elbow & Silhouette Analysis
-│   │   │   ├── distance.py             # Haversine distance calculator
-│   │   │   ├── candidate_generator.py  # Centroid & candidate synthesizer
-│   │   │   ├── scoring.py              # Location scoring engine (0-100)
-│   │   │   └── explanation.py          # Dynamic AI rationale generator
-│   │   └── routes/                     # REST API routing endpoints
-│   │       ├── analyze.py
-│   │       ├── demand.py
-│   │       ├── kmeans.py
-│   │       ├── candidates.py
-│   │       ├── centers.py
-│   │       └── upload.py
-│   └── requirements.txt
+│   └── app/
+│       ├── main.py                     # FastAPI application & API endpoints
+│       └── ml/
+│           ├── cleaner.py              # Data cleaning and validation pipeline
+│           ├── demand.py               # Customer demand aggregation
+│           ├── clustering.py           # K-Means, Elbow/WCSS, & Silhouette analysis
+│           ├── distance.py             # Haversine distance & coverage calculation
+│           ├── candidate_generator.py  # Centroid & candidate location generator
+│           ├── scoring.py              # Multi-criteria weighted recommendation scoring
+│           ├── explanation.py          # AI recommendation rationale generation
+│           └── pipeline.py             # Orchestrates the end-to-end analysis
+├── data/
+│   ├── auth.sqlite3                    # SQLite authentication database
+│   ├── customers_orders.csv            # Synthetic customer order data
+│   ├── delivery_centers.csv            # Existing delivery hubs
+│   ├── locations.csv                   # Area landmarks
+│   ├── population.csv                  # Locality population metrics
+│   └── roads.csv                       # Road network metrics
 ├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── layout/                 # Sidebar, Header, Layout
-│   │   │   ├── map/                    # Leaflet Map with custom layers
-│   │   │   └── ui/                     # LocationDetailDrawer, badges
-│   │   ├── pages/
-│   │   │   ├── Home.jsx
-│   │   │   ├── Dashboard.jsx
-│   │   │   ├── BusinessRequirements.jsx
-│   │   │   ├── CustomerDemand.jsx
-│   │   │   ├── Recommendations.jsx
-│   │   │   ├── LocationComparison.jsx
-│   │   │   ├── MapViewPage.jsx
-│   │   │   ├── AIAnalytics.jsx
-│   │   │   ├── ClusterExplorer.jsx
-│   │   │   ├── ExistingCenters.jsx
-│   │   │   ├── DataUpload.jsx
-│   │   │   └── Settings.jsx
-│   │   ├── services/
-│   │   │   └── api.js                  # Axios API client
-│   │   ├── App.jsx                     # Router & state management
-│   │   └── index.css                   # Tailwind CSS styling
-│   └── package.json
-└── data/
-    ├── customers_orders.csv            # 1,000 Nanded order records
-    ├── nanded_customer_data.csv        # Simulated customer order dataset
-    ├── roads.csv                       # Nanded road network data
-    ├── delivery_centers.csv            # Existing Nanded delivery hubs
-    └── locations.csv                   # Predefined Nanded area landmarks
+│   ├── index.html                      # Single-page dashboard application
+│   ├── styles.css                      # Application styling
+│   └── app.js                          # Vanilla JavaScript frontend controller
+├── requirements.txt                    # Python backend dependencies
+├── generate_nanded_data.py             # Synthetic data generator script
+└── test_backend.py                     # Direct pipeline verification script
 ```
 
 ---
 
-## 5. API Documentation
+## 5. Decision-Support Features & Multi-Criteria Priorities
+The recommendation engine evaluates candidate locations using weighted multi-criteria scoring:
+- **Balanced**: Standard default weighting balancing demand, distance, connectivity, cost, and coverage.
+- **Fast Delivery**: Prioritizes minimum delivery distance to customer clusters.
+- **Low Cost**: Prioritizes lower monthly hub operating expenses.
+- **Maximum Customer Coverage**: Emphasizes 5km radius customer reach.
+- **High Demand**: Prioritizes high customer order volume clusters.
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/api/analyze` | Runs complete end-to-end Nanded optimization pipeline |
-| `GET` | `/api/demand` | Returns customer demand metrics & area summary |
-| `GET` | `/api/customers` | Returns sample cleaned customer records |
-| `GET` | `/api/clusters` | Returns K-Means cluster summaries, Elbow curve & Silhouette scores |
-| `GET` | `/api/candidates` | Returns candidate sites scored according to active priority |
-| `GET` | `/api/recommendations` | Returns #1 AI recommended delivery center & rationale |
-| `GET` | `/api/existing-centers` | Returns current delivery hub utilization levels |
-| `POST` | `/api/upload` | Uploads CSV dataset, validates schema, updates pipeline |
-| `POST` | `/api/compare` | Compares 2-3 candidate locations side-by-side |
+*(Note: Advanced charts, PDF reports, heatmaps, and dynamic scenario comparisons are planned for later phases and are not yet implemented.)*
 
 ---
 
 ## 6. How to Run
 
-### Backend Startup
+### 1. Install Dependencies
 ```bash
-cd smartdeliver-ai/backend
-py app/main.py
+pip install -r requirements.txt
 ```
-*FastAPI server runs on `http://127.0.0.1:8000`.*
 
-### Frontend Startup
+### 2. Start the Application
+From the project root:
 ```bash
-cd smartdeliver-ai/frontend
-cmd /c "npm run dev"
+python -m uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 8000 --reload
 ```
-*Vite dev server runs on `http://localhost:5173`.*
+or run `main.py` directly:
+```bash
+python backend/app/main.py
+```
+
+### 3. Access Dashboard
+Open your browser and navigate to:
+```
+http://127.0.0.1:8000
+```
+FastAPI automatically serves the vanilla frontend directly at the root URL.
+
+### 4. Run Backend Tests
+To verify the ML pipeline and recommendations directly:
+```bash
+python test_backend.py
+```

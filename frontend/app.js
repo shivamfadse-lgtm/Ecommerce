@@ -602,24 +602,27 @@ function renderScenarioSimulator(container, d) {
 
 function renderImpact(container, d) {
   const rec = d.recommendation || {};
+  const avgDist = rec.average_delivery_distance != null ? `${rec.average_delivery_distance} km` : 'N/A';
+  const coverage = rec.coverage_percentage != null ? `${rec.coverage_percentage}%` : 'N/A';
+  const cost = rec.operating_cost != null ? `₹${Number(rec.operating_cost).toLocaleString()}` : 'N/A';
   container.innerHTML = `
     <div class="card">
       <div class="card-title">Estimated Business Impact Summary</div>
       <div class="kpi-grid" style="margin-top:16px;">
         <div class="card" style="background:#0f172a;">
           <div class="card-title">Avg Delivery Distance Reduction</div>
-          <div class="card-value" style="color:#10b981;">-32%</div>
-          <div class="card-sub">Down to ${rec.average_delivery_distance || 3.2} km</div>
+          <div class="card-value" style="color:#94a3b8; font-size:18px;">Not Calculated</div>
+          <div class="card-sub">Dynamic baseline pending Phase 4 (Current: ${avgDist})</div>
         </div>
         <div class="card" style="background:#0f172a;">
           <div class="card-title">Customer 5km Coverage</div>
-          <div class="card-value" style="color:#3b82f6;">${rec.coverage_percentage || 85}%</div>
+          <div class="card-value" style="color:#3b82f6;">${coverage}</div>
           <div class="card-sub">Direct reach</div>
         </div>
         <div class="card" style="background:#0f172a;">
           <div class="card-title">Estimated Monthly Operating Cost</div>
-          <div class="card-value">₹${(rec.operating_cost || 0).toLocaleString()}</div>
-          <div class="card-sub">Within Budget</div>
+          <div class="card-value">${cost}</div>
+          <div class="card-sub">Projected hub cost</div>
         </div>
       </div>
     </div>

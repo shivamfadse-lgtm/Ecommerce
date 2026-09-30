@@ -20,7 +20,6 @@ from app.ml.pipeline import AnalysisPipeline
 ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = ROOT / "data"
 FRONTEND_DIR = ROOT / "frontend"
-FRONTEND_DIST_DIR = FRONTEND_DIR / "dist"
 AUTH_DB = DATA_DIR / "auth.sqlite3"
 HASH_ITERATIONS = 310_000
 SESSION_TTL_SECONDS = 8 * 60 * 60
@@ -284,21 +283,21 @@ async def upload(file: UploadFile = File(...), priority: str = Query("Balanced")
 
 if FRONTEND_DIR.exists():
     app.mount("/assets", StaticFiles(directory=FRONTEND_DIR), name="assets")
-elif (FRONTEND_DIST_DIR / "assets").exists():
-    app.mount("/assets", StaticFiles(directory=FRONTEND_DIST_DIR / "assets"), name="assets")
-elif FRONTEND_DIST_DIR.exists():
-    app.mount("/assets", StaticFiles(directory=FRONTEND_DIST_DIR), name="assets")
 
 
 @app.get("/")
 def frontend():
-    index_path = FRONTEND_DIR / "index.html" if (FRONTEND_DIR / "index.html").exists() else FRONTEND_DIST_DIR / "index.html"
-    return FileResponse(index_path)
+    return FileResponse(FRONTEND_DIR / "index.html")
 
 
 @app.get("/{path:path}")
 def frontend_routes(path: str):
     if path.startswith("api/"):
         raise HTTPException(status_code=404, detail="Unknown API route")
-    index_path = FRONTEND_DIR / "index.html" if (FRONTEND_DIR / "index.html").exists() else FRONTEND_DIST_DIR / "index.html"
-    return FileResponse(index_path)
+    return FileResponse(FRONTEND_DIR / "index.html")
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("app.main:app", host="127.0.0.1", port=8000, reload=True)
+
