@@ -1,0 +1,7 @@
+road_id,road_name,latitude,longitude,road_type,road_connectivity_score,traffic_score,highway_distance_km
+ROAD_01,NH-61 (Malegaon Rd),19.155,77.3,National Highway,92,45,0.5
+ROAD_02,Hingoli Road,19.175,77.312,Arterial Road,88,55,1.2
+ROAD_03,Airport Road,19.185,77.325,Secondary Road,78,30,2.1
+ROAD_04,CIDCO Main Expressway,19.135,77.318,Arterial Road,85,40,1.8
+ROAD_05,Vasmat Road,19.165,77.29,State Highway,90,60,0.8
+ROAD_06,Degloor Naka Bypass,19.128,77.305,Bypass Highway,86,35,0.4

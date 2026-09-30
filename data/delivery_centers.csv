@@ -1,0 +1,3 @@
+center_id,center_name,latitude,longitude,capacity_per_day,current_daily_orders,operating_cost,status
+DC01,CIDCO Logistics Hub,19.132,77.315,2500,2150,145000,Near Capacity
+DC02,Workshop Zone Depot,19.158,77.306,3000,2890,165000,Overloaded

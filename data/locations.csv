@@ -1,0 +1,8 @@
+location_id,area,latitude,longitude,population_density,commercial_density,residential_density,operating_cost,highway_distance_km
+LOC01,Anand Nagar Commercial Zone,19.181,77.316,14500,85,65,135000,1.5
+LOC02,Taroda Naka Logistics Hub,19.168,77.294,16200,90,70,125000,0.9
+LOC03,Workshop Junction South,19.153,77.308,18500,95,80,155000,0.6
+LOC04,CIDCO Sector 4 Center,19.14,77.322,12000,60,85,110000,1.7
+LOC05,Old Nanded Station Road,19.146,77.301,21000,92,90,160000,1.1
+LOC06,Vasmat Road Bypass Plot,19.172,77.289,9800,50,55,95000,0.4
+LOC07,Vishnupuri Tech Hub,19.115,77.287,7500,40,45,85000,1.2
