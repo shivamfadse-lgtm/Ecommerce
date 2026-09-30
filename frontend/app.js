@@ -246,7 +246,23 @@ async function handleLogout() {
   fetchAnalysis();
 }
 
+let activeCharts = {};
+
+function destroyActiveCharts() {
+  Object.keys(activeCharts).forEach(key => {
+    try {
+      if (activeCharts[key] && typeof activeCharts[key].destroy === 'function') {
+        activeCharts[key].destroy();
+      }
+    } catch (e) {
+      console.warn('Error destroying chart:', key, e);
+    }
+  });
+  activeCharts = {};
+}
+
 function renderCurrentView() {
+  destroyActiveCharts();
   const container = document.getElementById('app');
   if (!container || !appState.analysisData) return;
 
@@ -395,51 +411,85 @@ function renderRecommendations(container, d) {
 }
 
 function renderAnalytics(container, d) {
+  if (!d || !d.analytics || !d.demand) {
+    container.innerHTML = `<div class="card" style="padding: 24px; text-align: center; color: #6B7772;">Analytics data unavailable.</div>`;
+    return;
+  }
+
   const elbow = d.analytics.elbow || [];
   const sil = d.analytics.silhouette || [];
+  const optK = d.analytics.optimal_k;
+  const silItem = sil.find(item => item.k === optK);
+  const optSilScore = silItem ? silItem.silhouette_score : 'N/A';
+  const areaSummary = d.demand.area_summary || [];
+  const dailyDemand = d.demand.daily_demand || [];
 
   container.innerHTML = `
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-      <div class="card">
-        <div class="card-title">Elbow Method (WCSS / Inertia)</div>
-        <p style="font-size: 12px; color: #94a3b8; margin-bottom: 12px;">WCSS decreases as cluster count K increases. Optimal elbow identified at K = <b>${d.analytics.optimal_k}</b>.</p>
-        <div class="table-container">
-          <table>
-            <thead><tr><th>Clusters (K)</th><th>WCSS / Inertia</th></tr></thead>
-            <tbody>
-              ${elbow.map(item => `
-                <tr style="${item.k === d.analytics.selected_k ? 'background: #1e293b; font-weight: bold; color: #d8e86a;' : ''}">
-                  <td>K = ${item.k} ${item.k === d.analytics.optimal_k ? '⭐ Optimal' : ''}</td>
-                  <td>${item.wcss.toLocaleString()}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
+    <!-- Top Row: K-Means Diagnostics (Elbow + Silhouette) -->
+    <div class="charts-grid">
+      <div class="card chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="card-title" style="margin-bottom:2px;">Elbow Method (WCSS / Inertia)</div>
+            <div style="font-size: 11px; color: #6B7772;">WCSS curve across K=2..8 to detect curvature elbow</div>
+          </div>
+          <span class="chart-badge">Optimal K = ${optK}</span>
+        </div>
+        <div class="chart-container">
+          <canvas id="chart-elbow"></canvas>
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-title">Silhouette Analysis</div>
-        <p style="font-size: 12px; color: #94a3b8; margin-bottom: 12px;">Higher silhouette score indicates better separation between customer clusters.</p>
-        <div class="table-container">
-          <table>
-            <thead><tr><th>Clusters (K)</th><th>Silhouette Score</th></tr></thead>
-            <tbody>
-              ${sil.map(item => `
-                <tr style="${item.k === d.analytics.selected_k ? 'background: #1e293b; font-weight: bold; color: #10b981;' : ''}">
-                  <td>K = ${item.k}</td>
-                  <td><b>${item.silhouette_score}</b></td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
+      <div class="card chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="card-title" style="margin-bottom:2px;">Silhouette Score Analysis</div>
+            <div style="font-size: 11px; color: #6B7772;">Cluster tightness & separation efficiency</div>
+          </div>
+          <span class="chart-badge">Authoritative K = ${optK} (${optSilScore})</span>
+        </div>
+        <div class="chart-container">
+          <canvas id="chart-silhouette"></canvas>
         </div>
       </div>
     </div>
 
-    <div class="card" style="margin-top: 20px;">
-      <div class="card-title">Discovered Customer Clusters (K=${d.clusters.length})</div>
-      <div class="table-container" style="margin-top: 12px;">
+    <!-- Second Row: Customer Demand Dynamics (Area Demand + Daily Trend) -->
+    <div class="charts-grid">
+      <div class="card chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="card-title" style="margin-bottom:2px;">Demand by Area</div>
+            <div style="font-size: 11px; color: #6B7772;">Total order distribution across Nanded localities</div>
+          </div>
+          <span class="chart-badge">${areaSummary.length} Localities</span>
+        </div>
+        <div class="chart-container">
+          <canvas id="chart-area-demand"></canvas>
+        </div>
+      </div>
+
+      <div class="card chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="card-title" style="margin-bottom:2px;">Daily Order Trend</div>
+            <div style="font-size: 11px; color: #6B7772;">Time-series order volume trajectory</div>
+          </div>
+          <span class="chart-badge">${dailyDemand.length} Days Tracked</span>
+        </div>
+        <div class="chart-container">
+          <canvas id="chart-daily-trend"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Row: Discovered Customer Clusters Table -->
+    <div class="card" style="margin-top: 4px;">
+      <div class="chart-header" style="margin-bottom:8px;">
+        <div class="card-title" style="margin-bottom:0;">Discovered Customer Clusters (K=${d.clusters.length})</div>
+        <span class="chart-badge">Model: scikit-learn KMeans</span>
+      </div>
+      <div class="table-container" style="margin-top: 10px;">
         <table>
           <thead>
             <tr>
@@ -467,6 +517,248 @@ function renderAnalytics(container, d) {
       </div>
     </div>
   `;
+
+  setTimeout(() => initAnalyticsCharts(d), 0);
+}
+
+function initAnalyticsCharts(d) {
+  if (typeof Chart === 'undefined') {
+    console.error('Chart.js library is not loaded');
+    return;
+  }
+
+  // Set global Chart.js styling
+  Chart.defaults.font.family = "'Plus Jakarta Sans', -apple-system, sans-serif";
+  Chart.defaults.color = "#6B7772";
+
+  const optK = d.analytics?.optimal_k;
+
+  // 1. Elbow / WCSS Chart
+  const elbowData = d.analytics?.elbow || [];
+  const elbowCanvas = document.getElementById('chart-elbow');
+  if (elbowCanvas && elbowData.length > 0) {
+    activeCharts['elbow'] = new Chart(elbowCanvas.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: elbowData.map(item => `K=${item.k}`),
+        datasets: [{
+          label: 'WCSS (Inertia)',
+          data: elbowData.map(item => item.wcss),
+          borderColor: '#17644F',
+          backgroundColor: 'rgba(23, 100, 79, 0.08)',
+          borderWidth: 2.5,
+          tension: 0.25,
+          fill: true,
+          pointBackgroundColor: elbowData.map(item => item.k === optK ? '#D8E86A' : '#17644F'),
+          pointBorderColor: elbowData.map(item => item.k === optK ? '#10231D' : '#FFFFFF'),
+          pointBorderWidth: elbowData.map(item => item.k === optK ? 2.5 : 1.5),
+          pointRadius: elbowData.map(item => item.k === optK ? 7 : 4),
+          pointHoverRadius: elbowData.map(item => item.k === optK ? 9 : 6),
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#18231F',
+            titleColor: '#F8FAF7',
+            bodyColor: '#F8FAF7',
+            padding: 10,
+            cornerRadius: 4,
+            callbacks: {
+              label: (context) => {
+                const kVal = elbowData[context.dataIndex]?.k;
+                const isOpt = kVal === optK ? ' ★ Authoritative Optimal K' : '';
+                return ` WCSS: ${Number(context.raw).toLocaleString()}${isOpt}`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            title: { display: true, text: 'Number of Clusters (K)', color: '#6B7772', font: { weight: '600', size: 11 } },
+            grid: { color: 'rgba(221, 216, 204, 0.4)' },
+            ticks: { color: '#6B7772' }
+          },
+          y: {
+            title: { display: true, text: 'WCSS / Inertia', color: '#6B7772', font: { weight: '600', size: 11 } },
+            grid: { color: 'rgba(221, 216, 204, 0.4)' },
+            ticks: { color: '#6B7772' }
+          }
+        }
+      }
+    });
+  }
+
+  // 2. Silhouette Score Chart
+  const silData = d.analytics?.silhouette || [];
+  const silCanvas = document.getElementById('chart-silhouette');
+  if (silCanvas && silData.length > 0) {
+    activeCharts['silhouette'] = new Chart(silCanvas.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: silData.map(item => `K=${item.k}`),
+        datasets: [{
+          label: 'Silhouette Score',
+          data: silData.map(item => item.silhouette_score),
+          backgroundColor: silData.map(item => item.k === optK ? '#17644F' : 'rgba(23, 100, 79, 0.3)'),
+          borderColor: silData.map(item => item.k === optK ? '#D8E86A' : '#17644F'),
+          borderWidth: silData.map(item => item.k === optK ? 2 : 1),
+          borderRadius: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#18231F',
+            titleColor: '#F8FAF7',
+            bodyColor: '#F8FAF7',
+            padding: 10,
+            cornerRadius: 4,
+            callbacks: {
+              label: (context) => {
+                const kVal = silData[context.dataIndex]?.k;
+                const isOpt = kVal === optK ? ' ★ Authoritative Optimal K' : '';
+                return ` Silhouette Score: ${context.raw}${isOpt}`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            title: { display: true, text: 'Number of Clusters (K)', color: '#6B7772', font: { weight: '600', size: 11 } },
+            grid: { display: false },
+            ticks: { color: '#6B7772' }
+          },
+          y: {
+            title: { display: true, text: 'Silhouette Score', color: '#6B7772', font: { weight: '600', size: 11 } },
+            grid: { color: 'rgba(221, 216, 204, 0.4)' },
+            ticks: { color: '#6B7772' },
+            suggestedMin: 0
+          }
+        }
+      }
+    });
+  }
+
+  // 3. Demand by Area (Horizontal Bar Chart)
+  const areaData = [...(d.demand?.area_summary || [])].sort((a, b) => b.total_orders - a.total_orders);
+  const areaCanvas = document.getElementById('chart-area-demand');
+  if (areaCanvas && areaData.length > 0) {
+    activeCharts['areaDemand'] = new Chart(areaCanvas.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: areaData.map(a => a.area),
+        datasets: [{
+          label: 'Total Orders',
+          data: areaData.map(a => a.total_orders),
+          backgroundColor: areaData.map(a => a.zone_type?.includes('High') ? '#17644F' : 'rgba(23, 100, 79, 0.5)'),
+          borderColor: '#17644F',
+          borderWidth: 1,
+          borderRadius: 4
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#18231F',
+            titleColor: '#F8FAF7',
+            bodyColor: '#F8FAF7',
+            padding: 10,
+            cornerRadius: 4,
+            callbacks: {
+              label: (context) => {
+                const item = areaData[context.dataIndex];
+                return ` Orders: ${item.total_orders.toLocaleString()} (${item.demand_pct}% demand · ${item.customer_count} customers)`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            title: { display: true, text: 'Total Orders', color: '#6B7772', font: { weight: '600', size: 11 } },
+            grid: { color: 'rgba(221, 216, 204, 0.4)' },
+            ticks: { color: '#6B7772' }
+          },
+          y: {
+            title: { display: true, text: 'Area / Locality', color: '#6B7772', font: { weight: '600', size: 11 } },
+            grid: { display: false },
+            ticks: { color: '#18231F', font: { size: 11, weight: '500' } }
+          }
+        }
+      }
+    });
+  }
+
+  // 4. Daily Order Trend (Time Series Line Chart)
+  const dailyData = d.demand?.daily_demand || [];
+  const dailyCanvas = document.getElementById('chart-daily-trend');
+  if (dailyCanvas && dailyData.length > 0) {
+    activeCharts['dailyTrend'] = new Chart(dailyCanvas.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: dailyData.map(item => item.date),
+        datasets: [{
+          label: 'Daily Orders',
+          data: dailyData.map(item => item.orders),
+          borderColor: '#17644F',
+          backgroundColor: 'rgba(23, 100, 79, 0.12)',
+          borderWidth: 2,
+          tension: 0.25,
+          fill: true,
+          pointRadius: 2,
+          pointHoverRadius: 5,
+          pointBackgroundColor: '#17644F'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#18231F',
+            titleColor: '#F8FAF7',
+            bodyColor: '#F8FAF7',
+            padding: 10,
+            cornerRadius: 4,
+            callbacks: {
+              label: (context) => {
+                const item = dailyData[context.dataIndex];
+                const rev = item?.revenue != null ? ` · Revenue: ₹${Math.round(item.revenue).toLocaleString()}` : '';
+                return ` Orders: ${context.raw}${rev}`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            title: { display: true, text: 'Order Date', color: '#6B7772', font: { weight: '600', size: 11 } },
+            grid: { color: 'rgba(221, 216, 204, 0.4)' },
+            ticks: {
+              color: '#6B7772',
+              maxTicksLimit: 10,
+              maxRotation: 0
+            }
+          },
+          y: {
+            title: { display: true, text: 'Orders', color: '#6B7772', font: { weight: '600', size: 11 } },
+            grid: { color: 'rgba(221, 216, 204, 0.4)' },
+            ticks: { color: '#6B7772' }
+          }
+        }
+      }
+    });
+  }
 }
 
 function renderNetworkMap(container, d) {
